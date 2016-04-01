@@ -1,0 +1,21 @@
+language: cpp
+compiler:
+  - g++
+install:
+  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8" CC="gcc-4.8"; fi 
+  - mkdir build && cd build
+  - cmake -DCMAKE_BUILD_TYPE=Release ..
+  - make
+script:
+  - test/m3bp-test
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    - boost-latest
+    packages:
+    - g++-4.8
+    - cmake
+    - libhwloc-dev
+    - libboost-log1.55-dev
+sudo: false
