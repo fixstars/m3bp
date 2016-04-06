@@ -38,30 +38,56 @@ hwloc_topology_t initialize_topology(){
 	return topology;
 }
 
-size_type count_processing_units(hwloc_topology_t topology){
-	const auto retval = hwloc_get_nbobjs_by_type(topology, HWLOC_OBJ_PU);
-	if(retval == -1){
+std::vector<identifier_type>
+enumerate_processing_units(hwloc_topology_t topology){
+	const auto n = hwloc_get_nbobjs_by_type(topology, HWLOC_OBJ_PU);
+	if(n == -1){
 		throw std::runtime_error(
 			"An error occured on `hwloc_get_nbobjs_by_type(HWLOC_OBJ_PU)`");
-	}else if(retval == 0){
-		return 1;
 	}
-	return retval;
+
+	hwloc_cpuset_t before_cpuset = hwloc_bitmap_alloc();
+	hwloc_get_cpubind(topology, before_cpuset, HWLOC_CPUBIND_THREAD);
+
+	std::vector<identifier_type> available_units;
+	for(int i = 0; i < n; ++i){
+		const auto obj = hwloc_get_obj_by_type(topology, HWLOC_OBJ_PU, i);
+		if(hwloc_set_cpubind(topology, obj->cpuset, HWLOC_CPUBIND_THREAD) == 0){
+			available_units.push_back(i);
+		}
+	}
+
+	hwloc_set_cpubind(topology, before_cpuset, HWLOC_CPUBIND_THREAD);
+	hwloc_bitmap_free(before_cpuset);
+	return available_units;
 }
 
-size_type count_numa_nodes(hwloc_topology_t topology){
+std::vector<identifier_type>
+enumerate_numa_nodes(hwloc_topology_t topology){
 	if(hwloc_get_type_depth(topology, HWLOC_OBJ_NODE) <= 0){
 		// Current system topology does not have the depth of NUMA nodes
-		return 1;
+		return std::vector<identifier_type>(1, 0);
 	}
-	const auto retval = hwloc_get_nbobjs_by_type(topology, HWLOC_OBJ_NODE);
-	if(retval == -1){
+	const auto n = hwloc_get_nbobjs_by_type(topology, HWLOC_OBJ_NODE);
+	if(n == -1){
 		throw std::runtime_error(
 			"An error occured on `hwloc_get_nbobjs_by_type(HWLOC_OBJ_NODE)`");
-	}else if(retval == 0){
-		return 1;
 	}
-	return retval;
+
+	hwloc_cpuset_t before_cpuset = hwloc_bitmap_alloc();
+	hwloc_get_cpubind(topology, before_cpuset, HWLOC_CPUBIND_THREAD);
+
+	std::vector<identifier_type> available_nodes;
+	for(int i = 0; i < n; ++i){
+		const auto obj = hwloc_get_obj_by_type(topology, HWLOC_OBJ_NODE, i);
+		if(hwloc_set_cpubind(topology, obj->cpuset, HWLOC_CPUBIND_THREAD) == 0){
+			available_nodes.push_back(i);
+		}
+	}
+
+	hwloc_set_cpubind(topology, before_cpuset, HWLOC_CPUBIND_THREAD);
+	hwloc_bitmap_free(before_cpuset);
+	return available_nodes;
 }
 #endif
 
@@ -71,18 +97,24 @@ size_type count_numa_nodes(hwloc_topology_t topology){
 
 Topology::Topology()
 	: m_topology(initialize_topology())
-	, m_total_processing_unit_count(count_processing_units(m_topology))
-	, m_processing_units_per_node(count_numa_nodes(m_topology))
+	, m_available_processing_units(enumerate_processing_units(m_topology))
+	, m_available_numa_nodes(enumerate_numa_nodes(m_topology))
+	, m_processing_units_per_node(m_available_numa_nodes.size())
 {
-	const auto num_nodes = m_processing_units_per_node.size();
-	for(identifier_type i = 0; i < m_total_processing_unit_count; ++i){
+	const auto num_nodes = m_available_numa_nodes.size();
+	for(const auto pu : m_available_processing_units){
 		if(num_nodes == 1){
 			++m_processing_units_per_node[0];
 		}else{
-			auto obj = hwloc_get_obj_by_type(m_topology, HWLOC_OBJ_PU, i);
+			auto obj = hwloc_get_obj_by_type(m_topology, HWLOC_OBJ_PU, pu);
 			while(obj && obj->type != HWLOC_OBJ_NODE){ obj = obj->parent; }
 			if(obj && obj->type == HWLOC_OBJ_NODE){
-				++m_processing_units_per_node[obj->logical_index];
+				const auto it = std::find(
+					m_available_numa_nodes.begin(),
+					m_available_numa_nodes.end(),
+					obj->logical_index);
+				const auto index = it - m_available_numa_nodes.begin();
+				++m_processing_units_per_node[index];
 			}else{
 				++m_processing_units_per_node[0];
 			}
@@ -97,9 +129,15 @@ Topology::~Topology(){
 #else
 
 Topology::Topology()
-	: m_total_processing_unit_count(std::thread::hardware_concurrency())
-	, m_processing_units_per_node(1, m_total_processing_unit_count)
-{ }
+	: m_available_processing_units(std::thread::hardware_concurrency())
+	, m_available_numa_nodes(1, 0)
+	, m_processing_units_per_node(1, m_available_processing_units.size())
+{
+	const auto n = m_available_processing_units.size();
+	for(identifier_type i = 0; i < n; ++i){
+		m_available_processing_units[i] = i;
+	}
+}
 
 Topology::~Topology() = default;
 
@@ -113,7 +151,7 @@ Topology &Topology::instance(){
 
 void Topology::set_thread_cpubind(identifier_type numa_node){
 #ifdef M3BP_LOCALITY_ENABLED
-	const auto num_nodes = m_processing_units_per_node.size();
+	const auto num_nodes = m_available_numa_nodes.size();
 	assert(numa_node < num_nodes);
 	hwloc_obj_t obj;
 	if(num_nodes == 1){
@@ -124,7 +162,8 @@ void Topology::set_thread_cpubind(identifier_type numa_node){
 				"`hwloc_get_obj_by_type(HWLOC_OBJ_MACHINE)`");
 		}
 	}else{
-		obj = hwloc_get_obj_by_type(m_topology, HWLOC_OBJ_NODE, numa_node);
+		obj = hwloc_get_obj_by_type(
+			m_topology, HWLOC_OBJ_NODE, m_available_numa_nodes[numa_node]);
 		if(!obj){
 			throw std::runtime_error(
 				"An error occured on `hwloc_get_obj_by_type(HWLOC_OBJ_NODE)`");
