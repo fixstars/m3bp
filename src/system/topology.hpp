@@ -34,7 +34,8 @@ private:
 	hwloc_topology_t m_topology;
 #endif
 
-	size_type m_total_processing_unit_count;
+	std::vector<identifier_type> m_available_processing_units;
+	std::vector<identifier_type> m_available_numa_nodes;
 	std::vector<size_type> m_processing_units_per_node;
 
 	Topology();
@@ -47,16 +48,16 @@ public:
 	static Topology &instance();
 
 	size_type total_processing_unit_count() const noexcept {
-		return m_total_processing_unit_count;
+		return m_available_processing_units.size();
 	}
 	size_type numa_node_count() const noexcept {
-		return m_processing_units_per_node.size();
+		return m_available_numa_nodes.size();
 	}
 
 	size_type processing_unit_per_node(
 		identifier_type numa_node) const noexcept
 	{
-		assert(numa_node < m_processing_units_per_node.size());
+		assert(numa_node < numa_node_count());
 		return m_processing_units_per_node[numa_node];
 	}
 

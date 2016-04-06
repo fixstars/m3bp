@@ -15,6 +15,7 @@
  */
 #include <thread>
 #include "m3bp/configuration.hpp"
+#include "system/topology.hpp"
 
 namespace m3bp {
 
@@ -30,7 +31,8 @@ private:
 
 public:
 	Impl()
-		: m_max_concurrency(std::thread::hardware_concurrency())
+		: m_max_concurrency(
+			Topology::instance().total_processing_unit_count())
 		, m_partition_count(m_max_concurrency * 8)
 		, m_default_output_buffer_size(4 << 20) // 4 [MB]
 		, m_default_records_per_buffer(m_default_output_buffer_size / 8)
