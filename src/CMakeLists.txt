@@ -4,14 +4,13 @@ project(m3bp)
 set(M3BP_VERSION "0.1.0")
 option(ENABLE_LOCALITY "Enable locality support (hwloc is required)" On)
 
-string(SUBSTRING "$Id$" 5 40 GIT_IDENT)
-string(LENGTH ${GIT_IDENT} GIT_IDENT_LENGTH)
-if(${GIT_IDENT_LENGTH} EQUAL 40)
-	string(SUBSTRING ${GIT_IDENT} 0 7 M3BP_REVISION)
-else()
-	execute_process(COMMAND git show -s --format=%h
-	                OUTPUT_VARIABLE M3BP_REVISION
-	                OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND git show -s --format=%h
+                RESULT_VARIABLE GIT_SHOW_RESULT
+                OUTPUT_VARIABLE M3BP_REVISION
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_QUIET)
+if(NOT ${GIT_SHOW_RESULT} EQUAL "0")
+	set(M3BP_REVISION "$Format:%h$")
 endif()
 if(M3BP_REVISION)
 	set(M3BP_VERSION "${M3BP_VERSION}-${M3BP_REVISION}")
