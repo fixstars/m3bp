@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(m3bp)
 
-set(M3BP_VERSION "0.1.0")
+set(M3BP_VERSION "0.1.1")
 option(ENABLE_LOCALITY "Enable locality support (hwloc is required)" On)
 
 set(M3BP_REVISION "$Format:%h$")
@@ -17,7 +17,7 @@ if(NOT ${M3BP_REVISION} MATCHES "^[0-9a-f]+$")
 	endif()
 endif()
 if(M3BP_REVISION)
-	set(M3BP_VERSION "${M3BP_VERSION}-${M3BP_REVISION}")
+	# set(M3BP_VERSION "${M3BP_VERSION}-${M3BP_REVISION}")
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
