@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(m3bp)
 
-set(M3BP_VERSION "0.1.0")
+set(M3BP_VERSION "0.1.1")
 option(ENABLE_LOCALITY "Enable locality support (hwloc is required)" On)
 
 set(M3BP_REVISION "$Format:%h$")
