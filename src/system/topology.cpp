@@ -19,11 +19,20 @@
 #include "system/topology.hpp"
 #include "logging/general_logger.hpp"
 
+#ifdef M3BP_NO_THREAD_LOCAL
+#include "common/thread_specific.hpp"
+#endif
+
 namespace m3bp {
 namespace {
 
 #ifdef M3BP_LOCALITY_ENABLED
-thread_local identifier_type g_binded_node = 0;
+
+#ifdef M3BP_NO_THREAD_LOCAL
+static ThreadSpecific<identifier_type> g_ts_binded_node;
+#else
+static thread_local identifier_type g_binded_node = 0;
+#endif
 
 hwloc_topology_t initialize_topology(){
 	hwloc_topology_t topology;
@@ -172,13 +181,27 @@ void Topology::set_thread_cpubind(identifier_type numa_node){
 	if(hwloc_set_cpubind(m_topology, obj->cpuset, HWLOC_CPUBIND_THREAD) != 0){
 		throw std::runtime_error("An error occured on `hwloc_set_cpubind()`");
 	}
+#	ifdef M3BP_NO_THREAD_LOCAL
+	g_ts_binded_node.get() = numa_node;
+#	else
 	g_binded_node = numa_node;
+#	endif
+#else
+	(void)(numa_node);
 #endif
 }
 
 
 void *Topology::allocate_membind(size_type size){
+#ifdef M3BP_LOCALITY_ENABLED
+#	ifdef M3BP_NO_THREAD_LOCAL
+	return allocate_membind(size, g_ts_binded_node.get());
+#	else
 	return allocate_membind(size, g_binded_node);
+#	endif
+#else
+	return allocate_membind(size, 0);
+#endif
 }
 
 void *Topology::allocate_membind(

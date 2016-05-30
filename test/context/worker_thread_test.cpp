@@ -19,13 +19,18 @@
 #include "m3bp/configuration.hpp"
 #include "m3bp/flow_graph.hpp"
 #include "m3bp/thread_observer_base.hpp"
+#include "common/thread_specific.hpp"
 #include "context/worker_thread.hpp"
 #include "context/execution_context.hpp"
 #include "scheduler/scheduler.hpp"
 
 namespace {
 
-thread_local int g_thread_initialize_order_counter = 0;
+#ifdef M3BP_NO_THREAD_LOCAL
+m3bp::ThreadSpecific<int> g_ts_initialize_order_counter;
+#else
+static thread_local int g_thread_initialize_order_counter = 0;
+#endif
 
 template <
 	bool THROW_ON_INITIALIZE,
@@ -46,13 +51,21 @@ public:
 	virtual void on_initialize() override {
 		EXPECT_FALSE(m_initialized);
 		if(THROW_ON_INITIALIZE){ throw std::exception(); }
+#ifdef M3BP_NO_THREAD_LOCAL
+		m_on_initialize_counter = g_ts_initialize_order_counter.get()++;
+#else
 		m_on_initialize_counter = g_thread_initialize_order_counter++;
+#endif
 		m_initialized = true;
 	}
 	virtual void on_finalize() override {
 		EXPECT_TRUE(m_initialized);
 		m_initialized = false;
+#ifdef M3BP_NO_THREAD_LOCAL
+		const auto counter = --g_ts_initialize_order_counter.get();
+#else
 		const auto counter = --g_thread_initialize_order_counter;
+#endif
 		EXPECT_EQ(m_on_initialize_counter, counter);
 		if(THROW_ON_FINALIZE){ throw std::exception(); }
 	}

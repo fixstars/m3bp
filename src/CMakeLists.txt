@@ -2,7 +2,15 @@ cmake_minimum_required(VERSION 2.8)
 project(m3bp)
 
 set(M3BP_VERSION "0.1.1")
-option(ENABLE_LOCALITY "Enable locality support (hwloc is required)" On)
+
+if(APPLE)
+	set(DEFAULT_ENABLE_LOCALITY Off)
+else()
+	set(DEFAULT_ENABLE_LOCALITY On)
+endif()
+
+option(ENABLE_LOCALITY "Enable locality support (hwloc is required)"
+       ${DEFAULT_ENABLE_LOCALITY})
 
 set(M3BP_REVISION "$Format:%h$")
 if(NOT ${M3BP_REVISION} MATCHES "^[0-9a-f]+$")
@@ -26,6 +34,9 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
 find_package(Threads REQUIRED)
 
 if(ENABLE_LOCALITY)
+	if(APPLE)
+		message(FATAL_ERROR "Locality support is not available on Mac OS X")
+	endif()
 	find_package(hwloc REQUIRED)
 	if(HWLOC_FOUND)
 		add_definitions(-DM3BP_LOCALITY_ENABLED)
@@ -35,7 +46,11 @@ endif()
 find_package(Boost 1.55 COMPONENTS log REQUIRED)
 add_definitions(-DBOOST_LOG_DYN_LINK)
 
-include_directories(${Boost_INCLUDE_DIR})
+if(APPLE)
+	add_definitions(-DM3BP_NO_THREAD_LOCAL)
+endif()
+
+include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${HWLOC_INCLUDE_DIR})
 include_directories(.)
 include_directories(../include)
@@ -57,8 +72,11 @@ file(GLOB SOURCES
      "tasks/process/*.cpp")
 
 if(UNIX)
-	set(COMPILE_OPTIONS "-std=c++11 -g -Wall -Wextra -pthread")
-	set(LINK_OPTIONS    "-pthread")
+	set(COMPILE_OPTIONS "-std=c++11 -g -Wall -Wextra")
+	set(LINK_OPTIONS    " ")
+else()
+	set(COMPILE_OPTIONS " ")
+	set(LINK_OPTIONS    " ")
 endif()
 
 add_definitions(-DM3BP_VERSION="${M3BP_VERSION}")

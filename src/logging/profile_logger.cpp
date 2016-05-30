@@ -19,6 +19,10 @@
 #include "m3bp/configuration.hpp"
 #include "graph/logical_graph.hpp"
 
+#ifdef M3BP_NO_THREAD_LOCAL
+#include "common/thread_specific.hpp"
+#endif
+
 namespace m3bp {
 
 void ProfileLogger::set_configuration(const Configuration &config){
@@ -94,10 +98,17 @@ ProfileLogger::ProfileLogger(
 }
 
 
+#ifdef M3BP_NO_THREAD_LOCAL
+static ThreadSpecific<ProfileEventLogger> g_ts_event_logger;
+ProfileEventLogger &ProfileLogger::thread_local_logger(){
+	return g_ts_event_logger.get();
+}
+#else
 ProfileEventLogger &ProfileLogger::thread_local_logger(){
 	static thread_local ProfileEventLogger s_thread_local_event_logger;
 	return s_thread_local_event_logger;
 }
+#endif
 
 void ProfileLogger::flush_thread_local_log(identifier_type worker_id){
 	auto log_json = thread_local_logger().to_json();

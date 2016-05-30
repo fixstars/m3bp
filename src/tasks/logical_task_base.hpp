@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <vector>
+#include <string>
 #include "tasks/logical_task_identifier.hpp"
 #include "tasks/physical_task_identifier.hpp"
 #include "memory/memory_reference.hpp"

@@ -16,15 +16,36 @@
 #include <random>
 #include "common/random.hpp"
 
+#ifdef M3BP_NO_THREAD_LOCAL
+#include "common/thread_specific.hpp"
+#endif
+
 namespace m3bp {
 
-thread_local std::random_device g_random_device;
-thread_local std::default_random_engine g_engine(g_random_device());
+#ifdef M3BP_NO_THREAD_LOCAL
+struct RandomEngine {
+	std::random_device random_device;
+	std::default_random_engine engine;
+
+	RandomEngine()
+		: random_device()
+		, engine(random_device())
+	{ }
+};
+static ThreadSpecific<RandomEngine> g_ts_random_engine;
+#else
+static thread_local std::random_device g_random_device;
+static thread_local std::default_random_engine g_engine(g_random_device());
+#endif
 
 template <typename T>
 T uniform_random_integer(T lo, T hi){
 	std::uniform_int_distribution<T> dist(lo, hi);
+#ifdef M3BP_NO_THREAD_LOCAL
+	return dist(g_ts_random_engine.get().engine);
+#else
 	return dist(g_engine);
+#endif
 }
 
 template          char uniform_random_integer(         char,          char);

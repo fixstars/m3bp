@@ -409,8 +409,5 @@ size_type ProfileEventLogger::write_json(
 	return Logger::size;
 }
 
-
-thread_local ProfileEventLogger g_thread_local_event_logger;
-
 }
 
