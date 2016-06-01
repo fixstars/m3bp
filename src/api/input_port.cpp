@@ -101,7 +101,7 @@ InputPort &InputPort::movement(Movement m){
 
 
 InputPort::ValueComparatorType InputPort::value_comparator() const {
-	return std::move(m_impl->value_comparator());
+	return m_impl->value_comparator();
 }
 
 InputPort &InputPort::value_comparator(ValueComparatorType comparator){

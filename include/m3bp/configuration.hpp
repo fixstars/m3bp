@@ -17,6 +17,7 @@
 #define M3BP_CONFIGURATION_HPP
 
 #include <memory>
+#include <string>
 #include "m3bp/types.hpp"
 
 namespace m3bp {

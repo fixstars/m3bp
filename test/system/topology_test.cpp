@@ -60,7 +60,7 @@ TEST(Topology, SystemInfo){
 	auto &topo = m3bp::Topology::instance();
 	const auto num_pu = topo.total_processing_unit_count();
 	EXPECT_EQ(available_processor_count(), num_pu);
-	EXPECT_GE(num_pu, 1);
+	EXPECT_GE(num_pu, 1u);
 	const auto num_nodes = topo.numa_node_count();
 	m3bp::size_type sum = 0;
 	for(m3bp::identifier_type i = 0; i < num_nodes; ++i){
