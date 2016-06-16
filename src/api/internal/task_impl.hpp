@@ -63,9 +63,6 @@ private:
 	std::vector<TaskInput>  m_inputs;
 	std::vector<TaskOutput> m_outputs;
 
-	size_type m_default_output_buffer_size;
-	size_type m_default_records_per_output_buffer;
-
 	bool m_is_cancelled;
 
 public:
@@ -77,8 +74,6 @@ public:
 		, m_current_locality()
 		, m_inputs()
 		, m_outputs()
-		, m_default_output_buffer_size(4 << 20)
-		, m_default_records_per_output_buffer(1 << 20)
 		, m_is_cancelled(false)
 	{ }
 
@@ -146,6 +141,7 @@ public:
 		if(port_id >= m_outputs.size()){
 			throw std::out_of_range("Output port is out of range");
 		}
+		const auto &config = m_context->configuration();
 		OutputWriterImpl writer_impl;
 		writer_impl
 			.context                   (m_context)
@@ -153,25 +149,14 @@ public:
 			.current_locality          (m_current_locality)
 			.output_port               (port_id)
 			.has_keys                  (m_outputs[port_id].has_keys)
-			.default_buffer_size       (m_default_output_buffer_size)
-			.default_records_per_buffer(m_default_records_per_output_buffer);
+			.default_buffer_size       (config.default_output_buffer_size())
+			.default_records_per_buffer(config.default_records_per_buffer());
 		return OutputWriterImpl::wrap_impl(std::move(writer_impl));
 	}
 
 	TaskImpl &output(identifier_type port_id, TaskOutput output){
 		assert(port_id < m_outputs.size());
 		m_outputs[port_id] = std::move(output);
-		return *this;
-	}
-
-
-	TaskImpl &default_output_buffer_size(size_type size){
-		m_default_output_buffer_size = size;
-		return *this;
-	}
-
-	TaskImpl &default_records_per_output_buffer(size_type count){
-		m_default_records_per_output_buffer = count;
 		return *this;
 	}
 
