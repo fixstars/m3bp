@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(m3bp)
 
-set(M3BP_VERSION "0.1.1")
+set(M3BP_VERSION "0.1.2")
 
 if(APPLE)
 	set(DEFAULT_ENABLE_LOCALITY Off)
@@ -25,7 +25,7 @@ if(NOT ${M3BP_REVISION} MATCHES "^[0-9a-f]+$")
 	endif()
 endif()
 if(M3BP_REVISION)
-	set(M3BP_VERSION "${M3BP_VERSION}-${M3BP_REVISION}")
+	# set(M3BP_VERSION "${M3BP_VERSION}-${M3BP_REVISION}")
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
