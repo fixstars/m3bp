@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(m3bp)
 
-set(M3BP_VERSION "0.1.1")
+set(M3BP_VERSION "0.1.2")
 
 if(APPLE)
 	set(DEFAULT_ENABLE_LOCALITY Off)
